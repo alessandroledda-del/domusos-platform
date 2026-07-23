@@ -127,7 +127,7 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-L'API è disponibile all'indirizzo `http://localhost:8000/api/`  
+L'API è disponibile all'indirizzo `http://localhost:8000/api/`
 Il pannello di amministrazione è disponibile all'indirizzo `http://localhost:8000/admin/`
 
 ---
