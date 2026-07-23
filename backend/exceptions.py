@@ -5,10 +5,16 @@ from rest_framework.views import exception_handler
 def _first_leaf(value):
     if isinstance(value, dict):
         for nested in value.values():
-            return _first_leaf(nested)
+            leaf = _first_leaf(nested)
+            if leaf is not None:
+                return leaf
         return None
     if isinstance(value, list):
-        return _first_leaf(value[0]) if value else None
+        for nested in value:
+            leaf = _first_leaf(nested)
+            if leaf is not None:
+                return leaf
+        return None
     return value
 
 

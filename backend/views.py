@@ -17,6 +17,14 @@ from .serializers import (
 )
 
 
+def can_change_password(requester, target_user):
+    return (
+        requester == target_user
+        or requester.ruolo == User.ROLE_ADMIN
+        or (requester.ruolo == User.ROLE_MANAGER and target_user.ruolo != User.ROLE_ADMIN)
+    )
+
+
 class UserViewSet(viewsets.ModelViewSet):
     """
     ViewSet for User management
@@ -51,10 +59,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         requester = request.user
 
-        allowed = requester == user or requester.ruolo == User.ROLE_ADMIN or (
-            requester.ruolo == User.ROLE_MANAGER and user.ruolo != User.ROLE_ADMIN
-        )
-        if not allowed:
+        if not can_change_password(requester, user):
             raise PermissionDenied('You do not have permission to change this password.')
 
         password = request.data.get('password')
