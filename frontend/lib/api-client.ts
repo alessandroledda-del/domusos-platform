@@ -48,7 +48,7 @@ class ApiClient {
     this.client.interceptors.request.use((config) => {
       const token = localStorage.getItem('access_token');
       if (token) {
-        config.headers.Authorization = ['Bearer', token].join(' ');
+        config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
     });
@@ -71,7 +71,7 @@ class ApiClient {
               });
 
               localStorage.setItem('access_token', response.data.access);
-              originalRequest.headers.Authorization = ['Bearer', response.data.access].join(' ');
+              originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
               return this.client(originalRequest);
             } catch {
               localStorage.removeItem('access_token');

@@ -51,6 +51,7 @@ class User(AbstractUser):
     ]
 
     username = None
+    # This project stores names in nome/cognome instead of first_name/last_name.
     first_name = None
     last_name = None
 

@@ -157,7 +157,7 @@ class HealthEndpointTests(APITestBase):
         self.assertEqual(response.json()['status'], 'ok')
 
     @override_settings(REDIS_HEALTHCHECK_URL='redis://cache:6379/0')
-    @patch('backend.health.Redis.from_url')
+    @patch('redis.Redis.from_url')
     def test_ready_endpoint_reports_redis_degraded_when_ping_fails(self, from_url):
         from redis.exceptions import RedisError
 

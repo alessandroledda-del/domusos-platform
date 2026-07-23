@@ -190,11 +190,10 @@ CORS_ALLOW_CREDENTIALS = True
 
 REDIS_URL = os.environ.get('REDIS_URL')
 if not REDIS_URL and os.environ.get('REDIS_HOST'):
-    REDIS_URL = 'redis://{host}:{port}/{db}'.format(
-        host=os.environ.get('REDIS_HOST', 'localhost'),
-        port=os.environ.get('REDIS_PORT', '6379'),
-        db=os.environ.get('REDIS_DB', '0'),
-    )
+    host = os.environ.get('REDIS_HOST', 'localhost')
+    port = os.environ.get('REDIS_PORT', '6379')
+    db = os.environ.get('REDIS_DB', '0')
+    REDIS_URL = f'redis://{host}:{port}/{db}'
 
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', REDIS_URL or '')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', REDIS_URL or '')
