@@ -210,7 +210,7 @@ L'applicazione è disponibile all'indirizzo `http://localhost:3000`
 Tutti gli endpoint (tranne `/api/token/`) richiedono un JWT valido nell'header `Authorization`, usando lo schema Bearer:
 
 ```http
-Authorization: Bearer-token-JWT
+Authorization: JWT token
 ```
 
 ---
