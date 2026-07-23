@@ -65,9 +65,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Django settings module
-DJANGO_SETTINGS_MODULE = 'backend.settings'
-
 # Database
 DATABASES = {
     'default': {

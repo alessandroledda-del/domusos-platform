@@ -1,9 +1,7 @@
 from django.db import migrations, models
-import django.contrib.auth.models
 import django.contrib.auth.validators
 import django.db.models.deletion
 import django.utils.timezone
-from backend.models import UserManager
 
 
 class Migration(migrations.Migration):
@@ -40,9 +38,6 @@ class Migration(migrations.Migration):
                 'db_table': 'users',
                 'ordering': ['-created_at'],
             },
-            managers=[
-                ('objects', UserManager()),
-            ],
         ),
         migrations.CreateModel(
             name='Company',
