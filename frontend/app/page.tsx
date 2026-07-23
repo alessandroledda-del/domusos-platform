@@ -1,29 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useAuthStore } from '@/store/authStore'
 
 export default function Home() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
+  const accessToken = useAuthStore((state) => state.accessToken)
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
-    if (token) {
-      router.push('/dashboard')
-    } else {
-      router.push('/login')
-    }
-    setIsLoading(false)
-  }, [router])
+    router.replace(accessToken ? '/dashboard' : '/login')
+  }, [accessToken, router])
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
-  return null
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <LoadingSpinner label="Loading workspace..." />
+    </div>
+  )
 }

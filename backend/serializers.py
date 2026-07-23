@@ -1,9 +1,10 @@
 from rest_framework import serializers
-from .models import User, Company, Property
+
+from .models import Company, Property, User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer for User model"""
+    """Serializer for User model."""
 
     password = serializers.CharField(write_only=True, required=False, min_length=8)
 
@@ -24,16 +25,10 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def create(self, validated_data):
-        """Create user with hashed password."""
         password = validated_data.pop('password', None)
-        user = User(**validated_data)
-        if password:
-            user.set_password(password)
-        user.save()
-        return user
+        return User.objects.create_user(raw_password=password, **validated_data)
 
     def update(self, instance, validated_data):
-        """Update user, hashing password if provided."""
         password = validated_data.pop('password', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -44,15 +39,15 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(UserSerializer):
-    """Extended serializer for detailed user information"""
+    """Extended serializer for detailed user information."""
 
     class Meta(UserSerializer.Meta):
-        fields = [f for f in UserSerializer.Meta.fields if f != 'password']
+        fields = [field for field in UserSerializer.Meta.fields if field != 'password']
 
 
 class CompanySerializer(serializers.ModelSerializer):
-    """Serializer for Company model"""
-    
+    """Serializer for Company model."""
+
     class Meta:
         model = Company
         fields = [
@@ -68,10 +63,10 @@ class CompanySerializer(serializers.ModelSerializer):
 
 
 class CompanyDetailSerializer(serializers.ModelSerializer):
-    """Extended serializer for detailed company information with properties"""
-    
+    """Extended serializer for detailed company information with properties."""
+
     properties = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Company
         fields = [
@@ -85,9 +80,8 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             'properties',
         ]
         read_only_fields = ['id', 'created_at']
-    
+
     def get_properties(self, obj):
-        """Get count and list of properties for the company"""
         properties = obj.properties.all()
         return {
             'count': properties.count(),
@@ -96,10 +90,10 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
 
 
 class PropertySerializer(serializers.ModelSerializer):
-    """Serializer for Property model"""
-    
+    """Serializer for Property model."""
+
     company_name = serializers.CharField(source='company.ragione_sociale', read_only=True)
-    
+
     class Meta:
         model = Property
         fields = [
@@ -121,10 +115,10 @@ class PropertySerializer(serializers.ModelSerializer):
 
 
 class PropertyDetailSerializer(serializers.ModelSerializer):
-    """Extended serializer for detailed property information"""
-    
+    """Extended serializer for detailed property information."""
+
     company = CompanySerializer(read_only=True)
-    
+
     class Meta:
         model = Property
         fields = [
@@ -145,8 +139,8 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
 
 
 class PropertyCreateUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for creating/updating properties"""
-    
+    """Serializer for creating/updating properties."""
+
     class Meta:
         model = Property
         fields = [
