@@ -207,10 +207,10 @@ L'applicazione è disponibile all'indirizzo `http://localhost:3000`
 | POST | `/api/properties/{id}/update_status/` | Aggiorna lo stato |
 | GET | `/api/properties/by_company/?company_id=` | Recupera gli immobili di un'azienda |
 
-Tutti gli endpoint (tranne `/api/token/`) richiedono un JWT valido nell'header `Authorization`:
+Tutti gli endpoint (tranne `/api/token/`) richiedono un JWT valido nell'header `Authorization`, usando lo schema Bearer:
 
 ```http
-Authorization: JWT
+Authorization: [schema Bearer] [token JWT]
 ```
 
 ---
