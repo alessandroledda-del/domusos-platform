@@ -28,8 +28,11 @@ INSTALLED_APPS = [
     'corsheaders',
     
     # Local apps
-    'backend',
+    'backend.apps.BackendConfig',
 ]
+
+# Custom user model
+AUTH_USER_MODEL = 'backend.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -61,6 +64,9 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+
+# Django settings module
+DJANGO_SETTINGS_MODULE = 'backend.settings'
 
 # Database
 DATABASES = {
