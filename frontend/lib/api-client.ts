@@ -1,8 +1,16 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 
 interface AuthResponse {
   access: string;
   refresh: string;
+}
+
+interface ApiErrorPayload {
+  code?: string;
+  message?: string;
+  details?: unknown;
+  trace_id?: string;
+  detail?: string;
 }
 
 interface User {
@@ -13,6 +21,15 @@ interface User {
   telefono: string;
   ruolo: string;
   stato: string;
+}
+
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!axios.isAxiosError(error)) {
+    return fallback;
+  }
+
+  const data = error.response?.data as ApiErrorPayload | undefined;
+  return data?.message || data?.detail || fallback;
 }
 
 class ApiClient {
@@ -28,46 +45,47 @@ class ApiClient {
       },
     });
 
-    // Add token to requests if available
     this.client.interceptors.request.use((config) => {
       const token = localStorage.getItem('access_token');
       if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        config.headers.Authorization = ['Bearer', token].join(' ');
       }
       return config;
     });
 
-    // Handle token refresh on 401
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
         const originalRequest = error.config;
-        
-        if (error.response?.status === 401 && originalRequest) {
+
+        if (
+          error.response?.status === 401 &&
+          originalRequest &&
+          !originalRequest.url?.includes('/token/refresh/')
+        ) {
           const refreshToken = localStorage.getItem('refresh_token');
           if (refreshToken) {
             try {
               const response = await axios.post(`${this.baseURL}/token/refresh/`, {
                 refresh: refreshToken,
               });
-              
+
               localStorage.setItem('access_token', response.data.access);
-              originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
+              originalRequest.headers.Authorization = ['Bearer', response.data.access].join(' ');
               return this.client(originalRequest);
-            } catch (refreshError) {
+            } catch {
               localStorage.removeItem('access_token');
               localStorage.removeItem('refresh_token');
               window.location.href = '/login';
             }
           }
         }
-        
+
         return Promise.reject(error);
       }
     );
   }
 
-  // Authentication endpoints
   async login(email: string, password: string): Promise<AuthResponse> {
     const response = await this.client.post('/token/', { email, password });
     return response.data;
@@ -83,7 +101,6 @@ class ApiClient {
     return response.data;
   }
 
-  // Users endpoints
   async getUsers(page: number = 1) {
     const response = await this.client.get('/users/', { params: { page } });
     return response.data;
@@ -94,7 +111,7 @@ class ApiClient {
     return response.data;
   }
 
-  async createUser(userData: Partial<User> & { password_hash: string }) {
+  async createUser(userData: Partial<User> & { password: string }) {
     const response = await this.client.post('/users/', userData);
     return response.data;
   }
@@ -113,7 +130,6 @@ class ApiClient {
     return response.data;
   }
 
-  // Companies endpoints
   async getCompanies(page: number = 1) {
     const response = await this.client.get('/companies/', { params: { page } });
     return response.data;
@@ -124,12 +140,12 @@ class ApiClient {
     return response.data;
   }
 
-  async createCompany(companyData: any) {
+  async createCompany(companyData: Record<string, unknown>) {
     const response = await this.client.post('/companies/', companyData);
     return response.data;
   }
 
-  async updateCompany(id: number, companyData: any) {
+  async updateCompany(id: number, companyData: Record<string, unknown>) {
     const response = await this.client.put(`/companies/${id}/`, companyData);
     return response.data;
   }
@@ -143,9 +159,8 @@ class ApiClient {
     return response.data;
   }
 
-  // Properties endpoints
   async getProperties(page: number = 1, companyId?: number) {
-    const params: any = { page };
+    const params: Record<string, number> = { page };
     if (companyId) {
       params.company_id = companyId;
     }
@@ -158,12 +173,12 @@ class ApiClient {
     return response.data;
   }
 
-  async createProperty(propertyData: any) {
+  async createProperty(propertyData: Record<string, unknown>) {
     const response = await this.client.post('/properties/', propertyData);
     return response.data;
   }
 
-  async updateProperty(id: number, propertyData: any) {
+  async updateProperty(id: number, propertyData: Record<string, unknown>) {
     const response = await this.client.put(`/properties/${id}/`, propertyData);
     return response.data;
   }

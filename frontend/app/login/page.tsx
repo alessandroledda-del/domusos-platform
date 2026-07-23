@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { apiClient } from '@/lib/api-client'
+import { apiClient, getApiErrorMessage } from '@/lib/api-client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -21,8 +21,8 @@ export default function LoginPage() {
       localStorage.setItem('access_token', response.access)
       localStorage.setItem('refresh_token', response.refresh)
       router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed. Please try again.')
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Login failed. Please try again.'))
     } finally {
       setIsLoading(false)
     }

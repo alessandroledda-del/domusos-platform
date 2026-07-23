@@ -138,7 +138,7 @@ Admin panel at `http://localhost:8000/admin/`
 
 ```bash
 cd frontend
-npm install
+npm ci
 ```
 
 ### 2. Configure environment variables
@@ -207,11 +207,7 @@ App is available at `http://localhost:3000`
 | POST | `/api/properties/{id}/update_status/` | Update status |
 | GET | `/api/properties/by_company/?company_id=` | Properties by company |
 
-All endpoints (except `/api/token/`) require a valid JWT ******
-
-```
-Authorization: ******
-```
+All endpoints (except `/api/token/`) require a valid JWT access token sent in the `Authorization` header.
 
 ---
 
@@ -252,6 +248,12 @@ Authorization: ******
 | `categoria_catastale` | CharField | Cadastral category |
 | `domus_score` | DecimalField (optional) | Proprietary property score |
 | `status` | CharField | `active` / `inactive` / `archived` |
+
+---
+
+## AI Integration
+
+See `docs/AI_INTEGRATION.md` for machine-client authentication, token refresh, trace IDs, and standardized error handling.
 
 ---
 
