@@ -40,6 +40,6 @@ The frontend uses the App Router. Pages cover login, dashboard, users, companies
 ## Request flow
 
 1. A user obtains an access and refresh token from `/api/token/`.
-2. The frontend sends the access token as `Authorization: ******
+2. The frontend sends the access token in the `Authorization` header using the `Bearer` scheme.
 3. Django authenticates the request and dispatches it to the relevant viewset.
 4. DRF serializes the response as JSON.

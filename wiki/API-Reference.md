@@ -12,7 +12,7 @@ The base URL is `http://localhost:8000/api`. Except for token creation, endpoint
 Send the access token on protected requests:
 
 ```http
-Authorization: ******
+Use the `Authorization` header with the `Bearer` scheme and the access token.
 ```
 
 ## Users
