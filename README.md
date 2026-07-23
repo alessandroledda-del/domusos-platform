@@ -138,7 +138,7 @@ Il pannello di amministrazione è disponibile all'indirizzo `http://localhost:80
 
 ```bash
 cd frontend
-npm install
+npm ci
 ```
 
 ### 2. Configura le variabili d'ambiente
@@ -207,10 +207,10 @@ L'applicazione è disponibile all'indirizzo `http://localhost:3000`
 | POST | `/api/properties/{id}/update_status/` | Aggiorna lo stato |
 | GET | `/api/properties/by_company/?company_id=` | Recupera gli immobili di un'azienda |
 
-Tutti gli endpoint (tranne `/api/token/`) richiedono un JWT valido nell'header `Authorization`, usando lo schema Bearer:
+Tutti gli endpoint (tranne `/api/token/`) richiedono un token di accesso JWT valido nell'header `Authorization`, usando lo schema Bearer:
 
 ```http
-Authorization: JWT token
+Authorization: ******
 ```
 
 ---
@@ -252,6 +252,12 @@ Authorization: JWT token
 | `categoria_catastale` | CharField | Categoria catastale |
 | `domus_score` | DecimalField (facoltativo) | Punteggio proprietario dell'immobile |
 | `status` | CharField | `active` / `inactive` / `archived` |
+
+---
+
+## Integrazione AI
+
+Consulta `docs/AI_INTEGRATION.md` per l'autenticazione dei client macchina, il rinnovo dei token, gli identificativi di traccia e la gestione standardizzata degli errori.
 
 ---
 
