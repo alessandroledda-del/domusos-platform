@@ -51,13 +51,11 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         requester = request.user
 
-        if requester != user:
-            if requester.ruolo == 'admin':
-                pass
-            elif requester.ruolo == 'manager' and user.ruolo != 'admin':
-                pass
-            else:
-                raise PermissionDenied('You do not have permission to change this password.')
+        allowed = requester == user or requester.ruolo == 'admin' or (
+            requester.ruolo == 'manager' and user.ruolo != 'admin'
+        )
+        if not allowed:
+            raise PermissionDenied('You do not have permission to change this password.')
 
         password = request.data.get('password')
         if not password:
@@ -120,7 +118,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         """Use different serializers based on action."""
         if self.action == 'retrieve':
             return PropertyDetailSerializer
-        if self.action in ['create', 'update', 'partial_update']:
+        elif self.action in ['create', 'update', 'partial_update']:
             return PropertyCreateUpdateSerializer
         return PropertySerializer
 
