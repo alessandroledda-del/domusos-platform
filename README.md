@@ -209,6 +209,10 @@ L'applicazione è disponibile all'indirizzo `http://localhost:3000`
 
 Tutti gli endpoint (tranne `/api/token/`) richiedono un JWT valido nell'header `Authorization`:
 
+```http
+Authorization: JWT
+```
+
 ---
 
 ## Modelli dati
