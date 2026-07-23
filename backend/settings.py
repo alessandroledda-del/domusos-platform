@@ -28,8 +28,11 @@ INSTALLED_APPS = [
     'corsheaders',
     
     # Local apps
-    'backend',
+    'backend.apps.BackendConfig',
 ]
+
+# Custom user model
+AUTH_USER_MODEL = 'backend.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

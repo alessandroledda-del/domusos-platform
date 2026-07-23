@@ -47,7 +47,7 @@ class ApiClient {
           const refreshToken = localStorage.getItem('refresh_token');
           if (refreshToken) {
             try {
-              const response = await axios.post(`${this.baseURL}/../token/refresh/`, {
+              const response = await axios.post(`${this.baseURL}/token/refresh/`, {
                 refresh: refreshToken,
               });
               
@@ -69,12 +69,12 @@ class ApiClient {
 
   // Authentication endpoints
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await this.client.post('/../token/', { email, password });
+    const response = await this.client.post('/token/', { email, password });
     return response.data;
   }
 
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
-    const response = await this.client.post('/../token/refresh/', { refresh: refreshToken });
+    const response = await this.client.post('/token/refresh/', { refresh: refreshToken });
     return response.data;
   }
 

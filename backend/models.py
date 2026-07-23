@@ -1,26 +1,50 @@
 from django.db import models
-from django.contrib.auth.hashers import make_password
-from django.utils import timezone
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 
-class User(models.Model):
-    """User model for the Domusos platform"""
-    
+class UserManager(BaseUserManager):
+    """Custom manager for User model with email as the unique identifier."""
+
+    def create_user(self, email, ****** **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        extra_fields.setdefault('is_active', True)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, ****** **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('ruolo', 'admin')
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+        return self.create_user(email, password, **extra_fields)
+
+
+class User(AbstractUser):
+    """User model for the Domusos platform."""
+
     ROLE_CHOICES = [
         ('admin', 'Administrator'),
         ('user', 'User'),
         ('guest', 'Guest'),
     ]
-    
+
     STATUS_CHOICES = [
         ('active', 'Active'),
         ('inactive', 'Inactive'),
         ('suspended', 'Suspended'),
     ]
-    
-    id = models.AutoField(primary_key=True)
+
+    # Remove the default username field; email is the login identifier
+    username = None
+
     email = models.EmailField(unique=True, max_length=255)
-    password_hash = models.CharField(max_length=255)
     nome = models.CharField(max_length=100)
     cognome = models.CharField(max_length=100)
     telefono = models.CharField(max_length=20, blank=True, null=True)
@@ -28,7 +52,12 @@ class User(models.Model):
     stato = models.CharField(max_length=50, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['nome', 'cognome']
+
+    objects = UserManager()
+
     class Meta:
         db_table = 'users'
         ordering = ['-created_at']
@@ -37,18 +66,9 @@ class User(models.Model):
             models.Index(fields=['ruolo']),
             models.Index(fields=['stato']),
         ]
-    
+
     def __str__(self):
         return f"{self.nome} {self.cognome} ({self.email})"
-    
-    def set_password(self, raw_password):
-        """Hash and set the password"""
-        self.password_hash = make_password(raw_password)
-    
-    def check_password(self, raw_password):
-        """Check if the provided password matches the hash"""
-        from django.contrib.auth.hashers import check_password
-        return check_password(raw_password, self.password_hash)
 
 
 class Company(models.Model):
