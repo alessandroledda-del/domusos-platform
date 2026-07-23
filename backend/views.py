@@ -51,8 +51,8 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         requester = request.user
 
-        allowed = requester == user or requester.ruolo == 'admin' or (
-            requester.ruolo == 'manager' and user.ruolo != 'admin'
+        allowed = requester == user or requester.ruolo == User.ROLE_ADMIN or (
+            requester.ruolo == User.ROLE_MANAGER and user.ruolo != User.ROLE_ADMIN
         )
         if not allowed:
             raise PermissionDenied('You do not have permission to change this password.')

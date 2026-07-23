@@ -117,6 +117,22 @@ class APIErrorContractTests(APITestBase):
         self.assertIn('details', payload)
         self.assertEqual(payload['trace_id'], response.headers['X-Trace-Id'])
 
+    def test_refresh_token_still_works(self):
+        token_response = self.client.post(
+            '/api/token/',
+            {'email': self.admin_user.email, 'password': 'admin12345!'},
+            format='json',
+        )
+
+        response = self.client.post(
+            '/api/token/refresh/',
+            {'refresh': token_response.json()['refresh']},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.json())
+
     def test_validation_error_includes_trace_id(self):
         self.authenticate(self.admin_user)
 

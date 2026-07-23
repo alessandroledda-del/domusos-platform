@@ -32,11 +32,16 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     """User model for the Domusos platform."""
 
+    ROLE_ADMIN = 'admin'
+    ROLE_MANAGER = 'manager'
+    ROLE_USER = 'user'
+    ROLE_GUEST = 'guest'
+
     ROLE_CHOICES = [
-        ('admin', 'Administrator'),
-        ('manager', 'Manager'),
-        ('user', 'User'),
-        ('guest', 'Guest'),
+        (ROLE_ADMIN, 'Administrator'),
+        (ROLE_MANAGER, 'Manager'),
+        (ROLE_USER, 'User'),
+        (ROLE_GUEST, 'Guest'),
     ]
 
     STATUS_CHOICES = [
