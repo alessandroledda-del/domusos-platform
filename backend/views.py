@@ -45,9 +45,25 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def set_password(self, request, pk=None):
+        """Set a new password for a user.
+
+        Users can change their own password. Managers can change passwords for
+        non-admin users only. Admins can change any user's password.
+        """
         user = self.get_object()
-        if request.user != user and request.user.ruolo not in {'admin', 'manager'}:
-            return Response({'detail': 'You do not have permission to change this password.'}, status=403)
+        requester = request.user
+
+        # Self-service: any authenticated user can change their own password
+        if requester != user:
+            if requester.ruolo == 'admin':
+                pass  # admin can change anyone's password
+            elif requester.ruolo == 'manager' and user.ruolo != 'admin':
+                pass  # manager can change non-admin passwords
+            else:
+                return Response(
+                    {'detail': 'You do not have permission to change this password.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         password = request.data.get('password')
         if not password:

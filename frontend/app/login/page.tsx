@@ -33,7 +33,11 @@ export default function LoginPage() {
   const onSubmit = async (values: LoginFormValues) => {
     try {
       const response = await apiClient.login(values.email, values.password)
-      setTokens(response.access, response.refresh ?? '')
+      if (!response.refresh) {
+        toast.error('Login failed: no refresh token received.')
+        return
+      }
+      setTokens(response.access, response.refresh)
       const currentUser = await apiClient.getCurrentUser()
       setUser(currentUser)
       toast.success('Welcome back!')

@@ -9,6 +9,8 @@ on:
 jobs:
   frontend-lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: frontend
@@ -26,6 +28,8 @@ jobs:
 
   backend-static-checks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
