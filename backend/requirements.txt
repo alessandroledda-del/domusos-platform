@@ -1,6 +1,3 @@
 Django==5.1
 djangorestframework
-djangorestframework-simplejwt
 psycopg2-binary
-django-cors-headers
-python-dotenv
