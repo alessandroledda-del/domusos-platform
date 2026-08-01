@@ -16,7 +16,42 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Check dependency review support
+        id: dependency-review-support
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          auth_header="Authorization: ******"
+          status=$(curl --silent --show-error --output /tmp/dependency-review-response.json --write-out "%{http_code}" \
+            -H "${auth_header}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPOSITORY}/dependency-graph/compare/${BASE_SHA}...${HEAD_SHA}")
+
+          if [ "${status}" = "200" ]; then
+            echo "supported=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [ "${status}" = "403" ] || [ "${status}" = "404" ]; then
+            response=$(tr '\n' ' ' < /tmp/dependency-review-response.json | tr '[:upper:]' '[:lower:]')
+
+            case "${response}" in
+              *"dependency review is not supported"*|*"dependency graph"*)
+              echo "::warning::Skipping dependency review because the repository dependency graph is not available for this workflow."
+              echo "supported=false" >> "${GITHUB_OUTPUT}"
+              exit 0
+              ;;
+            esac
+          fi
+
+          echo "::error::Failed to determine dependency review support (HTTP ${status})."
+          cat /tmp/dependency-review-response.json
+          exit 1
       - name: Dependency Review
+        if: steps.dependency-review-support.outputs.supported == 'true'
         uses: actions/dependency-review-action@v4
 
   codeql:
