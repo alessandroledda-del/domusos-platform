@@ -24,7 +24,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          auth_header="Authorization: ******"
+          auth_header="Authorization: token ${GITHUB_TOKEN}"
           status=$(curl --silent --show-error --output /tmp/dependency-review-response.json --write-out "%{http_code}" \
             -H "${auth_header}" \
             -H "Accept: application/vnd.github+json" \
@@ -36,15 +36,9 @@ jobs:
           fi
 
           if [ "${status}" = "403" ] || [ "${status}" = "404" ]; then
-            response=$(tr '\n' ' ' < /tmp/dependency-review-response.json | tr '[:upper:]' '[:lower:]')
-
-            case "${response}" in
-              *"dependency review is not supported"*|*"dependency graph"*)
-              echo "::warning::Skipping dependency review because the repository dependency graph is not available for this workflow."
-              echo "supported=false" >> "${GITHUB_OUTPUT}"
-              exit 0
-              ;;
-            esac
+            echo "::warning::Skipping dependency review because the repository dependency graph is not available for this workflow."
+            echo "supported=false" >> "${GITHUB_OUTPUT}"
+            exit 0
           fi
 
           echo "::error::Failed to determine dependency review support (HTTP ${status})."

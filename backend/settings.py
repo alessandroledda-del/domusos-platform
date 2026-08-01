@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'drf_spectacular',
     'django_filters',
-    'backend.apps.BackendConfig',
+    'backend',
 ]
 
 AUTH_USER_MODEL = 'backend.User'
