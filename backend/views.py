@@ -1,11 +1,15 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters as drf_filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .filters import CompanyFilter, PropertyFilter, UserFilter
 from .models import Company, Property, User
+from .pagination import StandardResultsSetPagination
+from .permissions import IsAdminOrManager, IsAdminOrManagerOrReadOnly
 from .serializers import (
     CompanyDetailSerializer,
     CompanySerializer,
@@ -26,36 +30,35 @@ def can_change_password(requester, target_user):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for User management
-    - list: Get all users
-    - create: Create a new user
-    - retrieve: Get a specific user
-    - update: Update a user
-    - destroy: Delete a user
-    """
+    """ViewSet for user management."""
 
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
+    filterset_class = UserFilter
+    search_fields = ['email', 'nome', 'cognome']
+    ordering_fields = ['created_at', 'email', 'nome', 'cognome']
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdminOrManager]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
-        """Use DetailSerializer for retrieve action."""
-        if self.action == 'retrieve':
+        if self.action in ['retrieve', 'me']:
             return UserDetailSerializer
         return UserSerializer
 
-    def create(self, request, *args, **kwargs):
-        """Override create to handle password field."""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
     @action(detail=True, methods=['post'])
     def set_password(self, request, pk=None):
-        """Set a new password for the user."""
+        """Set a new password for a user.
+
+        Users can change their own password. Managers can change passwords for
+        non-admin users only. Admins can change any user's password.
+        """
         user = self.get_object()
         requester = request.user
 
@@ -78,21 +81,18 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class CompanyViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for Company management
-    - list: Get all companies
-    - create: Create a new company
-    - retrieve: Get a specific company
-    - update: Update a company
-    - destroy: Delete a company
-    """
+    """ViewSet for company management."""
 
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrManagerOrReadOnly]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
+    filterset_class = CompanyFilter
+    search_fields = ['ragione_sociale', 'partita_iva', 'email']
+    ordering_fields = ['created_at', 'ragione_sociale', 'tipo_cliente']
 
     def get_serializer_class(self):
-        """Use DetailSerializer for retrieve action."""
         if self.action == 'retrieve':
             return CompanyDetailSerializer
         return CompanySerializer
@@ -101,41 +101,29 @@ class CompanyViewSet(viewsets.ModelViewSet):
     def properties(self, request, pk=None):
         """Get all properties for a specific company."""
         company = self.get_object()
-        properties = company.properties.all()
-        serializer = PropertySerializer(properties, many=True)
+        serializer = PropertySerializer(company.properties.all(), many=True)
         return Response(serializer.data)
 
 
 class PropertyViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for Property management
-    - list: Get all properties
-    - create: Create a new property
-    - retrieve: Get a specific property
-    - update: Update a property
-    - destroy: Delete a property
-    """
+    """ViewSet for property management."""
 
-    queryset = Property.objects.all()
-    permission_classes = [IsAuthenticated]
-
-    def get_serializer_class(self):
-        """Use different serializers based on action."""
-        if self.action == 'retrieve':
-            return PropertyDetailSerializer
-        elif self.action in ['create', 'update', 'partial_update']:
-            return PropertyCreateUpdateSerializer
-        return PropertySerializer
+    permission_classes = [IsAdminOrManagerOrReadOnly]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
+    filterset_class = PropertyFilter
+    search_fields = ['indirizzo', 'comune', 'provincia', 'company__ragione_sociale']
+    ordering_fields = ['created_at', 'domus_score', 'comune', 'provincia']
 
     def get_queryset(self):
-        """Filter properties by company if provided."""
-        queryset = Property.objects.all()
-        company_id = self.request.query_params.get('company_id', None)
+        return Property.objects.select_related('company').all()
 
-        if company_id is not None:
-            queryset = queryset.filter(company_id=company_id)
-
-        return queryset
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return PropertyDetailSerializer
+        if self.action in ['create', 'update', 'partial_update']:
+            return PropertyCreateUpdateSerializer
+        return PropertySerializer
 
     @action(detail=False, methods=['get'])
     def by_company(self, request):
@@ -146,8 +134,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
             raise ValidationError({'company_id': ['This query parameter is required.']})
 
         company = get_object_or_404(Company, id=company_id)
-        properties = company.properties.all()
-        serializer = PropertySerializer(properties, many=True)
+        serializer = PropertySerializer(company.properties.select_related('company').all(), many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'])

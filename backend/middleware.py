@@ -1,17 +1,30 @@
+import time
 import uuid
 
+import structlog
 
-class RequestTraceMiddleware:
-    """Attach a stable trace identifier to every request and response."""
 
-    header_name = 'X-Trace-Id'
+logger = structlog.get_logger('backend.request')
 
+
+class RequestLoggingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        incoming_trace_id = request.headers.get(self.header_name, '').strip()
-        request.trace_id = incoming_trace_id or str(uuid.uuid4())
+        start = time.perf_counter()
+        request.trace_id = request.headers.get('X-Trace-Id', '').strip() or str(uuid.uuid4())
         response = self.get_response(request)
-        response[self.header_name] = request.trace_id
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        response['X-Trace-Id'] = request.trace_id
+        logger.info(
+            'request_completed',
+            method=request.method,
+            path=request.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+            trace_id=request.trace_id,
+            user_id=getattr(request.user, 'id', None),
+            remote_addr=request.META.get('REMOTE_ADDR'),
+        )
         return response

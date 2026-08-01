@@ -1,4 +1,7 @@
 import type { Metadata } from 'next'
+
+import { Toast } from '@/components/ui/Toast'
+
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -12,8 +15,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased transition-colors dark:bg-slate-950 dark:text-slate-100">
+        {children}
+        <Toast />
+      </body>
     </html>
   )
 }

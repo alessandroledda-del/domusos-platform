@@ -5,18 +5,23 @@ from django.db import models
 class UserManager(BaseUserManager):
     """Custom manager for User model with email as the unique identifier."""
 
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, email, raw_password=None, **extra_fields):
         if not email:
             raise ValueError('The Email field must be set')
+        if raw_password is None and 'password' in extra_fields:
+            raw_password = extra_fields.pop('password')
 
         email = self.normalize_email(email)
         extra_fields.setdefault('is_active', True)
         user = self.model(email=email, **extra_fields)
-        user.set_password(password)
+        if raw_password:
+            user.set_password(raw_password)
+        else:
+            user.set_unusable_password()
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password=None, **extra_fields):
+    def create_superuser(self, email, raw_password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('ruolo', 'admin')
@@ -25,8 +30,7 @@ class UserManager(BaseUserManager):
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
-
-        return self.create_user(email, password, **extra_fields)
+        return self.create_user(email, raw_password, **extra_fields)
 
 
 class User(AbstractUser):
