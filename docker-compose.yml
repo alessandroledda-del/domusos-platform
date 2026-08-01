@@ -38,8 +38,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../docker/frontend.Dockerfile
+      context: .
+      dockerfile: docker/frontend.Dockerfile
     command: npm run dev
     volumes:
       - ./frontend:/app

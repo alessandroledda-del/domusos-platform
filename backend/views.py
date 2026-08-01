@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters as drf_filters, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -18,6 +19,14 @@ from .serializers import (
     UserDetailSerializer,
     UserSerializer,
 )
+
+
+def can_change_password(requester, target_user):
+    return (
+        requester == target_user
+        or requester.ruolo == User.ROLE_ADMIN
+        or (requester.ruolo == User.ROLE_MANAGER and target_user.ruolo != User.ROLE_ADMIN)
+    )
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -39,7 +48,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
-        if self.action == 'retrieve' or self.action == 'me':
+        if self.action in ['retrieve', 'me']:
             return UserDetailSerializer
         return UserSerializer
 
@@ -53,21 +62,12 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         requester = request.user
 
-        # Self-service: any authenticated user can change their own password
-        if requester != user:
-            if requester.ruolo == 'admin':
-                pass  # admin can change anyone's password
-            elif requester.ruolo == 'manager' and user.ruolo != 'admin':
-                pass  # manager can change non-admin passwords
-            else:
-                return Response(
-                    {'detail': 'You do not have permission to change this password.'},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+        if not can_change_password(requester, user):
+            raise PermissionDenied('You do not have permission to change this password.')
 
         password = request.data.get('password')
         if not password:
-            return Response({'password': 'This field is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError({'password': ['This field is required.']})
 
         user.set_password(password)
         user.save(update_fields=['password'])
@@ -75,6 +75,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def me(self, request):
+        """Get current user profile."""
         serializer = UserDetailSerializer(request.user)
         return Response(serializer.data)
 
@@ -98,6 +99,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def properties(self, request, pk=None):
+        """Get all properties for a specific company."""
         company = self.get_object()
         serializer = PropertySerializer(company.properties.all(), many=True)
         return Response(serializer.data)
@@ -125,9 +127,11 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def by_company(self, request):
+        """Get properties filtered by company."""
         company_id = request.query_params.get('company_id')
+
         if not company_id:
-            return Response({'error': 'company_id parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError({'company_id': ['This query parameter is required.']})
 
         company = get_object_or_404(Company, id=company_id)
         serializer = PropertySerializer(company.properties.select_related('company').all(), many=True)
@@ -135,28 +139,36 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def update_score(self, request, pk=None):
+        """Update the Domus Score for a property."""
         property_obj = self.get_object()
         score = request.data.get('domus_score')
+
         if score is None:
-            return Response({'domus_score': 'This field is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError({'domus_score': ['This field is required.']})
 
         try:
             property_obj.domus_score = float(score)
-            property_obj.save(update_fields=['domus_score'])
-        except (TypeError, ValueError):
-            return Response({'domus_score': 'Invalid score value.'}, status=status.HTTP_400_BAD_REQUEST)
+        except (TypeError, ValueError) as exc:
+            raise ValidationError({'domus_score': ['Invalid score value.']}) from exc
 
+        property_obj.save(update_fields=['domus_score'])
         serializer = PropertyDetailSerializer(property_obj)
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
+        """Update the status for a property."""
         property_obj = self.get_object()
         new_status = request.data.get('status')
+
         if new_status not in dict(Property.STATUS_CHOICES):
-            return Response(
-                {'status': f'Invalid status. Must be one of: {", ".join(dict(Property.STATUS_CHOICES).keys())}'},
-                status=status.HTTP_400_BAD_REQUEST,
+            raise ValidationError(
+                {
+                    'status': [
+                        'Invalid status. Must be one of: '
+                        + ', '.join(dict(Property.STATUS_CHOICES).keys())
+                    ]
+                }
             )
 
         property_obj.status = new_status

@@ -12,9 +12,12 @@ node_modules
 frontend/node_modules
 frontend/.next
 frontend/coverage
+frontend/.env.local
 staticfiles
 media
 .env
+.venv
+venv
 *.log
 Dockerfile*
 docker-compose*.yml

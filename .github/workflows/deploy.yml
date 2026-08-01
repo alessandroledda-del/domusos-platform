@@ -27,11 +27,15 @@ jobs:
           context: .
           file: docker/backend.Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}-backend:latest
+          tags: |
+            ghcr.io/${{ github.repository }}-backend:latest
+            ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
+          context: .
           file: docker/frontend.Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}-frontend:latest
+          tags: |
+            ghcr.io/${{ github.repository }}-frontend:latest
+            ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}

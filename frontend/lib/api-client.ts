@@ -7,6 +7,23 @@ interface AuthResponse {
   refresh?: string
 }
 
+interface ApiErrorPayload {
+  code?: string
+  message?: string
+  details?: unknown
+  trace_id?: string
+  detail?: string
+}
+
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!axios.isAxiosError(error)) {
+    return fallback
+  }
+
+  const data = error.response?.data as ApiErrorPayload | undefined
+  return data?.message || data?.detail || fallback
+}
+
 class ApiClient {
   private client: AxiosInstance
   private baseURL: string

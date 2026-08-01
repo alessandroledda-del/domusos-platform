@@ -7,7 +7,7 @@ import { z } from 'zod'
 
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useToast } from '@/hooks/useToast'
-import { apiClient } from '@/lib/api-client'
+import { apiClient, getApiErrorMessage } from '@/lib/api-client'
 import { loginSchema } from '@/lib/validation'
 import { useAuthStore } from '@/store/authStore'
 
@@ -42,8 +42,8 @@ export default function LoginPage() {
       setUser(currentUser)
       toast.success('Welcome back!')
       router.push('/dashboard')
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Login failed. Please try again.')
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Login failed. Please try again.'))
     }
   }
 

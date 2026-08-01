@@ -22,20 +22,22 @@ services:
     command: gunicorn core.wsgi:application --bind 0.0.0.0:8000
     environment:
       DEBUG: 'False'
+      SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:3000}
       DB_HOST: postgres
       DB_NAME: ${DB_NAME:-domusos_db}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     depends_on:
       - postgres
       - redis
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../docker/frontend.Dockerfile
+      context: .
+      dockerfile: docker/frontend.Dockerfile
     restart: unless-stopped
     command: sh -c "npm run build && npm run start"
     environment:

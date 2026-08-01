@@ -10,6 +10,7 @@ class UserManager(BaseUserManager):
             raise ValueError('The Email field must be set')
         if raw_password is None and 'password' in extra_fields:
             raw_password = extra_fields.pop('password')
+
         email = self.normalize_email(email)
         extra_fields.setdefault('is_active', True)
         user = self.model(email=email, **extra_fields)
@@ -24,6 +25,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('ruolo', 'admin')
+
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
@@ -34,11 +36,16 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     """User model for the Domusos platform."""
 
+    ROLE_ADMIN = 'admin'
+    ROLE_MANAGER = 'manager'
+    ROLE_USER = 'user'
+    ROLE_GUEST = 'guest'
+
     ROLE_CHOICES = [
-        ('admin', 'Administrator'),
-        ('manager', 'Manager'),
-        ('user', 'User'),
-        ('guest', 'Guest'),
+        (ROLE_ADMIN, 'Administrator'),
+        (ROLE_MANAGER, 'Manager'),
+        (ROLE_USER, 'User'),
+        (ROLE_GUEST, 'Guest'),
     ]
 
     STATUS_CHOICES = [
@@ -48,6 +55,7 @@ class User(AbstractUser):
     ]
 
     username = None
+    # This project stores names in nome/cognome instead of first_name/last_name.
     first_name = None
     last_name = None
 
