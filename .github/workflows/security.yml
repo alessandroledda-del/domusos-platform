@@ -24,7 +24,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          auth_header="Authorization: ******"
+          auth_header="Authorization: token ${GITHUB_TOKEN}"
           status=$(curl --silent --show-error --output /tmp/dependency-review-response.json --write-out "%{http_code}" \
             -H "${auth_header}" \
             -H "Accept: application/vnd.github+json" \
