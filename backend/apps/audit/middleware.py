@@ -1,4 +1,3 @@
-import json
 from .models import AuditLog
 
 MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
@@ -9,26 +8,27 @@ class AuditMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
+        user = getattr(request, "user", None)
 
         if (
             request.method in MUTATING_METHODS
             and request.path.startswith("/api/")
-            and getattr(request, "user", None)
-            and request.user.is_authenticated
+            and user is not None
+            and user.is_authenticated
         ):
-            metadata = {
-                "method": request.method,
-                "path": request.path,
-                "status_code": response.status_code,
-                "remote_addr": request.META.get("REMOTE_ADDR"),
-                "user_agent": request.META.get("HTTP_USER_AGENT", "")[:250],
-            }
             AuditLog.objects.create(
-                user=request.user,
+                user=user,
                 action=f"HTTP_{request.method}",
                 entity_type="APIRequest",
                 entity_id=request.path[:100],
-                metadata=metadata,
+                metadata={
+                    "method": request.method,
+                    "path": request.path,
+                    "status_code": response.status_code,
+                    "remote_addr": request.META.get("REMOTE_ADDR"),
+                    "user_agent": request.META.get("HTTP_USER_AGENT", "")[:250],
+                    "request_id": getattr(request, "request_id", ""),
+                },
             )
 
         return response

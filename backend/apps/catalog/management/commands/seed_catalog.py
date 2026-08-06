@@ -130,10 +130,15 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for category_data in CATALOG:
-            services = category_data.pop("services")
+            services = category_data["services"]
+            category_defaults = {
+                key: value
+                for key, value in category_data.items()
+                if key != "services"
+            }
             category, _ = ServiceCategory.objects.update_or_create(
                 code=category_data["code"],
-                defaults=category_data,
+                defaults=category_defaults,
             )
             for service_data in services:
                 Service.objects.update_or_create(
