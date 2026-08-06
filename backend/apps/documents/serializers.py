@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.properties.access import accessible_properties
 from .models import Document, DocumentVersion
 
 class DocumentVersionSerializer(serializers.ModelSerializer):
@@ -7,7 +8,7 @@ class DocumentVersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentVersion
         fields = "__all__"
-        read_only_fields = ["version_number", "uploaded_at"]
+        read_only_fields = ["document", "version_number", "uploaded_at"]
 
     def validate_file(self, value):
         if value.size > 20 * 1024 * 1024:
@@ -27,10 +28,16 @@ class DocumentSerializer(serializers.ModelSerializer):
         latest = obj.latest_version
         return latest.version_number if latest else None
 
+    def validate_property(self, value):
+        request = self.context.get("request")
+        if request and not accessible_properties(request.user).filter(id=value.id).exists():
+            raise serializers.ValidationError("Immobile non accessibile.")
+        return value
+
     def validate_file(self, value):
         if value.size > 20 * 1024 * 1024:
             raise serializers.ValidationError("Dimensione massima: 20 MB.")
-        allowed = {"application/pdf", "image/jpeg", "image/png"}
+        allowed = {"application/pdf", "image/jpeg", "image/png", "image/tiff"}
         content_type = getattr(value, "content_type", None)
         if content_type and content_type not in allowed:
             raise serializers.ValidationError("Formato non supportato.")

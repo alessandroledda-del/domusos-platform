@@ -13,10 +13,8 @@ class WebhookDeliverySerializer(serializers.ModelSerializer):
     class Meta:
         model = WebhookDelivery
         fields = "__all__"
-        read_only_fields = fields
 
 class InboundEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = InboundEvent
         fields = "__all__"
-        read_only_fields = fields

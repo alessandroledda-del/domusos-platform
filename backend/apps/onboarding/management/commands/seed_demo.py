@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
@@ -157,7 +158,7 @@ class Command(BaseCommand):
                 "service_type": "Dossier Casa 360",
                 "status": Case.Status.OPEN,
                 "assigned_to": partner_user,
-                "due_date": timezone.localdate() + timezone.timedelta(days=5),
+                "due_date": timezone.localdate() + timedelta(days=5),
                 "created_by": agency_user,
             },
         )

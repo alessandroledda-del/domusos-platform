@@ -4,7 +4,7 @@ from .models import Document, DocumentVersion
 from .serializers import DocumentSerializer, DocumentVersionSerializer
 from .tasks import process_document_task
 from apps.properties.services import refresh_domus_score
-from apps.properties.views import accessible_properties
+from apps.properties.access import accessible_properties
 
 class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer

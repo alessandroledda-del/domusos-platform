@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from apps.catalog.models import Service
+from apps.companies.access import accessible_companies
+from apps.properties.access import accessible_properties
 from .models import Order, OrderItem, OrderStatusEvent
 from .services import add_service_to_order
 
@@ -57,6 +59,19 @@ class CreateOrderSerializer(serializers.Serializer):
         if services.count() != len(set(value)):
             raise serializers.ValidationError("Uno o più servizi non sono disponibili.")
         return value
+
+    def validate(self, attrs):
+        request = self.context["request"]
+        company_id = attrs.get("company")
+        property_id = attrs.get("property")
+
+        if company_id and not accessible_companies(request.user).filter(id=company_id).exists():
+            raise serializers.ValidationError({"company": "Organizzazione non accessibile."})
+
+        if property_id and not accessible_properties(request.user).filter(id=property_id).exists():
+            raise serializers.ValidationError({"property": "Immobile non accessibile."})
+
+        return attrs
 
     def create(self, validated_data):
         request = self.context["request"]

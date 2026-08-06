@@ -1,6 +1,6 @@
 from django.utils import timezone
 from rest_framework import decorators, permissions, response, status, views, viewsets
-from apps.properties.views import accessible_properties
+from apps.properties.access import accessible_properties
 from .models import Finding, VerificationCertificate, VerificationRun
 from .serializers import (
     FindingSerializer,

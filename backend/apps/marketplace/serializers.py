@@ -9,6 +9,12 @@ class PartnerServiceSerializer(serializers.ModelSerializer):
         model = PartnerService
         fields = "__all__"
 
+    def validate_partner(self, value):
+        request = self.context.get("request")
+        if request and not request.user.is_staff and value.user_id != request.user.id:
+            raise serializers.ValidationError("Profilo partner non accessibile.")
+        return value
+
 class PartnerProfileSerializer(serializers.ModelSerializer):
     service_offers = PartnerServiceSerializer(many=True, read_only=True)
     rank_score = serializers.SerializerMethodField()
@@ -18,6 +24,7 @@ class PartnerProfileSerializer(serializers.ModelSerializer):
         model = PartnerProfile
         fields = "__all__"
         read_only_fields = [
+            "user",
             "rating",
             "completed_assignments",
             "average_completion_hours",
@@ -51,7 +58,6 @@ class CommissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Commission
         fields = "__all__"
-        read_only_fields = fields
 
 class PayoutSerializer(serializers.ModelSerializer):
     partner_name = serializers.CharField(source="partner.display_name", read_only=True)
