@@ -1,50 +1,28 @@
-# API Guide
+# API v0.9
 
-## OpenAPI Documentation
+Documentazione interattiva:
 
-The backend exposes an OpenAPI schema generated with **drf-spectacular**.
+- `/api/docs/`
+- `/api/schema/`
 
-- Schema JSON: `/api/schema/`
-- Swagger UI: `/api/docs/`
-- ReDoc: `/api/redoc/`
+## Analytics
 
-## Authentication
+- GET `/api/analytics/dashboard/`
+- POST `/api/analytics/dashboard/snapshot/`
+- GET `/api/analytics/dashboard/export_csv/`
+- GET `/api/analytics/snapshots/`
 
-All API endpoints except health checks require JWT authentication.
+## Marketplace
 
-1. `POST /api/token/` with `email` and `password`
-2. Send the `Authorization` header with a valid JWT access token
-3. Refresh with `POST /api/token/refresh/`
-
-## RBAC
-
-- `admin`: full API access
-- `manager`: write access to users, companies, and properties
-- `user` / `guest`: read-only access to companies and properties, self-service user profile access
-
-## Filtering and Pagination
-
-Collection endpoints support paginated responses and filtering.
-
-### Users
-- `?ruolo=manager`
-- `?stato=active`
-- `?email=example`
-
-### Companies
-- `?tipo_cliente=enterprise`
-- `?ragione_sociale=domus`
-
-### Properties
-- `?company_id=1`
-- `?status=active`
-- `?comune=roma`
-- `?provincia=RM`
-- `?min_domus_score=70&max_domus_score=95`
-
-Responses use page-based pagination with `count`, `next`, `previous`, and `results`.
-
-## Health Checks
-
-- `GET /health/` — liveness probe
-- `GET /health/ready/` — readiness probe with database check
+- CRUD `/api/marketplace/partners/`
+- GET `/api/marketplace/partners/ranked/`
+- CRUD `/api/marketplace/services/`
+- CRUD `/api/marketplace/assignments/`
+- POST `/api/marketplace/assignments/assign/`
+- POST `/api/marketplace/assignments/{id}/accept/`
+- POST `/api/marketplace/assignments/{id}/complete/`
+- GET `/api/marketplace/commissions/`
+- CRUD `/api/marketplace/payouts/`
+- POST `/api/marketplace/payouts/generate/`
+- POST `/api/marketplace/payouts/{id}/approve/`
+- GET `/api/marketplace/dashboard/`

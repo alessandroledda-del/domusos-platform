@@ -1,31 +1,26 @@
-# Security
+# Sicurezza v0.7
 
-## Authentication and authorization
+## Implementato
 
-- JWT access tokens expire after 15 minutes
-- Refresh tokens rotate and expire after 7 days
-- RBAC is enforced through custom DRF permission classes:
-  - `IsAdmin`
-  - `IsAdminOrManager`
-  - `IsAdminOrManagerOrReadOnly`
+- storage privato S3;
+- antivirus ClamAV;
+- firme HMAC webhook;
+- idempotenza eventi;
+- audit API;
+- autenticazione JWT;
+- variabili d'ambiente;
+- elaborazione asincrona isolata.
 
-## Rate limiting
+## Da completare
 
-DRF throttling is enabled globally:
-- Anonymous clients: `30/minute`
-- Authenticated users: `120/minute`
-
-## Monitoring and logging
-
-- Request logging middleware records method, path, status, duration, user id, and source IP
-- Structured logging is configured with `structlog`
-
-## Operational checks
-
-- `/health/` provides liveness
-- `/health/ready/` validates database connectivity
-- `security.yml` runs dependency review and CodeQL scans
-
-## Dependency controls
-
-Backend and frontend dependencies should be kept aligned with repository manifests and scanned in CI before release.
+- MFA;
+- rate limiting;
+- CSP;
+- WAF;
+- secret manager;
+- audit immutabile;
+- cifratura applicativa;
+- scansione DLP;
+- retention automatica;
+- DPIA;
+- penetration test.
