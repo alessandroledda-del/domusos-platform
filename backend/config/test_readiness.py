@@ -1,6 +1,7 @@
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import TestCase, override_settings
+from rest_framework.test import APIRequestFactory, force_authenticate
 from apps.accounts.models import User
-from .readiness import readiness_view
+from .readiness import ReadinessView
 
 class ReadinessTest(TestCase):
     @override_settings(
@@ -19,7 +20,7 @@ class ReadinessTest(TestCase):
             is_staff=True,
             is_superuser=True,
         )
-        request = RequestFactory().get("/api/readiness/")
-        request.user = user
-        response = readiness_view(request)
+        request = APIRequestFactory().get("/api/readiness/")
+        force_authenticate(request, user=user)
+        response = ReadinessView.as_view()(request)
         self.assertEqual(response.status_code, 503)

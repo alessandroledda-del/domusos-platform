@@ -5,14 +5,14 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .health import health_check
-from .metrics import metrics_view
-from .readiness import readiness_view
+from .metrics import MetricsView
+from .readiness import ReadinessView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health_check, name="health"),
-    path("api/metrics/", metrics_view, name="metrics"),
-    path("api/readiness/", readiness_view, name="readiness"),
+    path("api/metrics/", MetricsView.as_view(), name="metrics"),
+    path("api/readiness/", ReadinessView.as_view(), name="readiness"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token"),
