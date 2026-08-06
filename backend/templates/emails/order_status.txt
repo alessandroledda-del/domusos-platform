@@ -1,0 +1,7 @@
+DomusOS
+
+Ordine {{ order_number }}
+
+Il nuovo stato del tuo ordine è: {{ status_label }}.
+
+Totale: EUR {{ total }}

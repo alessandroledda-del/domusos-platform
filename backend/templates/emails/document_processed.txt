@@ -1,0 +1,6 @@
+DomusOS
+
+Il documento "{{ document_name }}" è stato elaborato.
+
+Stato: {{ status }}
+Confidenza: {{ confidence }}

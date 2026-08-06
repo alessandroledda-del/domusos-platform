@@ -1,0 +1,10 @@
+DomusOS Partner Network
+
+Ciao {{ partner_name }},
+
+ti è stata proposta una nuova pratica:
+
+{{ case_title }}
+
+Compenso concordato: EUR {{ amount }}
+Scadenza: {{ due_at }}
