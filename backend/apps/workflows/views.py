@@ -1,6 +1,6 @@
 from django.db.models import Q
 from rest_framework import viewsets
-from apps.properties.views import accessible_properties
+from apps.properties.access import accessible_properties
 from .models import Case, Task
 from .serializers import CaseSerializer, TaskSerializer
 

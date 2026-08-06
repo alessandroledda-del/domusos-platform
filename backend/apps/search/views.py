@@ -1,7 +1,7 @@
 from django.db.models import Q
 from rest_framework import response, views
 from apps.documents.models import Document
-from apps.properties.views import accessible_properties
+from apps.properties.access import accessible_properties
 from apps.workflows.models import Case
 
 class GlobalSearchView(views.APIView):
