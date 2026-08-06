@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, downloadAuthenticated } from "@/lib/api";
 
 type Metrics = {
   orders: {
@@ -54,9 +54,15 @@ export default function AnalyticsPage() {
         <h1>Analytics DomusOS</h1>
         <div>
           <button className="button" onClick={snapshot}>Salva snapshot</button>{" "}
-          <a className="button" href="http://localhost:8000/api/analytics/dashboard/export_csv/">
+          <button
+            className="button"
+            onClick={() => downloadAuthenticated(
+              "/analytics/dashboard/export_csv/",
+              "domusos-kpi.csv",
+            )}
+          >
             Esporta CSV
-          </a>
+          </button>
         </div>
       </div>
 

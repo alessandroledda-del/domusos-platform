@@ -38,6 +38,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <Link href="/integrations">Integrazioni</Link>
           <Link href="/readiness">Pilot</Link>
           <Link href="/system">Sistema</Link>
+          <Link href="/logout">Esci</Link>
         </nav>
         {children}
       </body>
