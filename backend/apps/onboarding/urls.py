@@ -1,0 +1,6 @@
+from rest_framework.routers import DefaultRouter
+from .views import OnboardingViewSet
+
+router = DefaultRouter()
+router.register("", OnboardingViewSet, basename="onboarding")
+urlpatterns = router.urls
