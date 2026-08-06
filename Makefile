@@ -4,8 +4,14 @@ up:
 down:
 	docker compose down
 
+migrations:
+	docker compose exec backend sh scripts/generate_migrations.sh
+
+migration-check:
+	docker compose exec backend python manage.py makemigrations --check --dry-run
+	python scripts/check_migrations.py
+
 migrate:
-	docker compose exec backend python manage.py makemigrations
 	docker compose exec backend python manage.py migrate
 
 superuser:
@@ -18,22 +24,11 @@ demo:
 	docker compose exec backend python manage.py seed_demo
 
 test:
-	docker compose exec backend python manage.py test
+	docker compose exec backend sh -c "DJANGO_SETTINGS_MODULE=config.settings_test python manage.py test"
 
-logs:
-	docker compose logs -f
-
-worker-logs:
-	docker compose logs -f worker
-
-schema:
-	docker compose exec backend python manage.py spectacular --file openapi.yml
+release-check:
+	python scripts/check_release.py
+	python scripts/check_migrations.py
 
 production-up:
 	docker compose -f docker-compose.production.yml up -d --build
-
-production-down:
-	docker compose -f docker-compose.production.yml down
-
-smoke:
-	sh scripts/pilot_smoke_test.sh
