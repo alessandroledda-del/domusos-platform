@@ -38,8 +38,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         note = request.data.get("note", "")
         try:
             transition_order(order, new_status, request.user, note)
-        except ValueError as exc:
-            return response.Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return response.Response({"detail": "Invalid order transition."}, status=status.HTTP_400_BAD_REQUEST)
         return response.Response(OrderSerializer(order).data)
 
 class OrderDashboardViewSet(viewsets.ViewSet):
