@@ -1,0 +1,21 @@
+{
+  "version": "1.0.1",
+  "apps": {
+    "accounts": "0001_initial.py",
+    "analytics": "0001_initial.py",
+    "audit": "0001_initial.py",
+    "billing": "0001_initial.py",
+    "catalog": "0001_initial.py",
+    "companies": "0001_initial.py",
+    "compliance": "0001_initial.py",
+    "documents": "0001_initial.py",
+    "integrations": "0001_initial.py",
+    "marketplace": "0001_initial.py",
+    "notifications": "0001_initial.py",
+    "onboarding": "0001_initial.py",
+    "orders": "0001_initial.py",
+    "properties": "0001_initial.py",
+    "reports": "0001_initial.py",
+    "workflows": "0001_initial.py"
+  }
+}
