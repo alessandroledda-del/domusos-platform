@@ -17,7 +17,7 @@ def deliver_webhook_task(self, delivery_id):
     delivery.last_attempt_at = timezone.now()
     delivery.save(update_fields=["attempts", "last_attempt_at"])
 
-    response = requests.post(
+    http_response = requests.post(
         endpoint.url,
         json=delivery.payload,
         headers={
@@ -28,30 +28,24 @@ def deliver_webhook_task(self, delivery_id):
         timeout=10,
     )
 
-    delivery.response_status = response.status_code
-    delivery.response_body = response.text[:2000]
+    delivery.response_status = http_response.status_code
+    delivery.response_body = http_response.text[:2000]
     delivery.status = (
         WebhookDelivery.Status.DELIVERED
-        if 200 <= response.status_code < 300
+        if 200 <= http_response.status_code < 300
         else WebhookDelivery.Status.FAILED
     )
-    delivery.save(
-        update_fields=[
-            "response_status",
-            "response_body",
-            "status",
-        ]
-    )
-
-    response.raise_for_status()
+    delivery.save(update_fields=["response_status", "response_body", "status"])
+    http_response.raise_for_status()
     return delivery.status
 
 def publish_event(event_type, payload):
     event_id = str(uuid.uuid4())
-    endpoints = WebhookEndpoint.objects.filter(
-        is_active=True,
-        subscribed_events__contains=[event_type],
-    )
+    endpoints = [
+        endpoint
+        for endpoint in WebhookEndpoint.objects.filter(is_active=True)
+        if event_type in (endpoint.subscribed_events or [])
+    ]
     deliveries = []
     for endpoint in endpoints:
         delivery = WebhookDelivery.objects.create(
