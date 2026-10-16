@@ -41,13 +41,14 @@ class Order(models.Model):
         return self.number or f"Ordine {self.pk}"
 
     def save(self, *args, **kwargs):
-        if not self.number:
-            year = timezone.now().year
-            prefix = f"DOM-{year}-"
-            last = Order.objects.filter(number__startswith=prefix).order_by("-number").first()
-            sequence = int(last.number.split("-")[-1]) + 1 if last else 1
-            self.number = f"{prefix}{sequence:06d}"
+        needs_number = not self.number
+        if needs_number:
+            self.number = f"TMP-{timezone.now().year}-{timezone.now().timestamp():.6f}"
         super().save(*args, **kwargs)
+        if needs_number and self.number.startswith("TMP-"):
+            number = f"DOM-{timezone.now().year}-{self.pk:06d}"
+            type(self).objects.filter(pk=self.pk).update(number=number)
+            self.number = number
 
     def recalculate_totals(self):
         subtotal = sum((item.line_subtotal for item in self.items.all()), Decimal("0.00"))
