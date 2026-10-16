@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import permissions, response, status, views
 from apps.integrations.models import InboundEvent
 from apps.integrations.signatures import verify_signature
@@ -26,7 +27,7 @@ class PaymentWebhookView(views.APIView):
         event_id = payload.get("event_id")
         event_type = payload.get("event_type")
 
-        if not event_id or not event_type:
+        if not event_id or not event_type or not payload.get("payment_reference"):
             return response.Response(
                 {"detail": "Evento incompleto."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -35,10 +36,7 @@ class PaymentWebhookView(views.APIView):
         event, created = InboundEvent.objects.get_or_create(
             provider=provider,
             event_id=event_id,
-            defaults={
-                "event_type": event_type,
-                "payload": payload,
-            },
+            defaults={"event_type": event_type, "payload": payload},
         )
 
         if not created and event.processed:
@@ -46,11 +44,11 @@ class PaymentWebhookView(views.APIView):
 
         try:
             payment = Payment.objects.select_related("order").get(
-                provider_reference=payload["payment_reference"]
+                provider=provider,
+                provider_reference=payload["payment_reference"],
             )
             if event_type == "payment.succeeded":
                 payment.status = Payment.Status.SUCCEEDED
-                from django.utils import timezone
                 payment.completed_at = timezone.now()
                 payment.save(update_fields=["status", "completed_at"])
                 if payment.order.status == Order.Status.AWAITING_PAYMENT:
@@ -62,14 +60,18 @@ class PaymentWebhookView(views.APIView):
                     )
             elif event_type == "payment.failed":
                 payment.status = Payment.Status.FAILED
-                payment.save(update_fields=["status"])
+                payment.completed_at = timezone.now()
+                payment.save(update_fields=["status", "completed_at"])
 
             event.processed = True
             event.processing_error = ""
             event.save(update_fields=["processed", "processing_error"])
-        except Exception as exc:
-            event.processing_error = str(exc)[:1000]
+        except Payment.DoesNotExist:
+            event.processing_error = "Pagamento non trovato."
             event.save(update_fields=["processing_error"])
-            raise
+            return response.Response(
+                {"detail": "Pagamento non trovato."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         return response.Response({"status": "processed"})
