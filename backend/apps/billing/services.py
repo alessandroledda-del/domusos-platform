@@ -1,3 +1,4 @@
+import hashlib
 from io import BytesIO
 from django.core.files.base import ContentFile
 from django.db import IntegrityError, transaction
@@ -10,18 +11,30 @@ from apps.orders.services import transition_order
 from .models import Invoice, Payment
 from .providers import get_payment_provider
 
+def _scoped_idempotency_key(provider_code, order_id, user_id, raw_key):
+    if not raw_key:
+        return None
+    digest = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+    return f"{provider_code}:{order_id}:{user_id}:{digest}"[:120]
+
 @transaction.atomic
 def create_payment_intent(order, user, idempotency_key=None):
     if order.status != Order.Status.AWAITING_PAYMENT:
         raise ValueError("L'ordine non è in attesa di pagamento.")
 
     provider = get_payment_provider()
+    stored_key = _scoped_idempotency_key(
+        provider.code,
+        order.pk,
+        user.pk,
+        idempotency_key,
+    )
 
-    if idempotency_key:
+    if stored_key:
         existing = Payment.objects.filter(
             order=order,
             provider=provider.code,
-            idempotency_key=idempotency_key,
+            idempotency_key=stored_key,
         ).first()
         if existing:
             return existing
@@ -39,15 +52,15 @@ def create_payment_intent(order, user, idempotency_key=None):
                 "client_secret": intent.client_secret,
                 "provider_status": intent.status,
             },
-            idempotency_key=idempotency_key,
+            idempotency_key=stored_key,
             created_by=user,
         )
     except IntegrityError as exc:
-        if idempotency_key:
+        if stored_key:
             existing = Payment.objects.filter(
                 order=order,
                 provider=provider.code,
-                idempotency_key=idempotency_key,
+                idempotency_key=stored_key,
             ).first()
             if existing:
                 return existing
