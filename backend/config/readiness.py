@@ -43,6 +43,7 @@ class ReadinessView(views.APIView):
             "email_configured": bool(settings.DEFAULT_FROM_EMAIL),
             "antivirus_reachable": _check_antivirus(),
             "storage_reachable": _check_storage(),
+            "real_payment_provider": settings.PAYMENT_PROVIDER.upper() != "MOCK",
         }
         ready = all(checks.values())
         return response.Response(
