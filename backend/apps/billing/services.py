@@ -1,11 +1,10 @@
 from io import BytesIO
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from apps.integrations.tasks import publish_event
-from apps.notifications.tasks import send_email_task
 from apps.orders.models import Order
 from apps.orders.services import transition_order
 from .models import Invoice, Payment
@@ -16,64 +15,79 @@ def create_payment_intent(order, user, idempotency_key=None):
     if order.status != Order.Status.AWAITING_PAYMENT:
         raise ValueError("L'ordine non è in attesa di pagamento.")
 
+    provider = get_payment_provider()
+
     if idempotency_key:
-        existing = Payment.objects.filter(idempotency_key=idempotency_key).first()
+        existing = Payment.objects.filter(
+            order=order,
+            provider=provider.code,
+            idempotency_key=idempotency_key,
+        ).first()
         if existing:
             return existing
 
-    provider = get_payment_provider()
     intent = provider.create_intent(order)
-
-    return Payment.objects.create(
-        order=order,
-        provider=provider.code,
-        provider_reference=intent.reference,
-        amount=order.total,
-        status=Payment.Status.PENDING,
-        metadata={
-            "currency": intent.currency,
-            "client_secret": intent.client_secret,
-            "provider_status": intent.status,
-        },
-        idempotency_key=idempotency_key,
-        created_by=user,
-    )
+    try:
+        return Payment.objects.create(
+            order=order,
+            provider=provider.code,
+            provider_reference=intent.reference,
+            amount=order.total,
+            status=Payment.Status.PENDING,
+            metadata={
+                "currency": intent.currency,
+                "client_secret": intent.client_secret,
+                "provider_status": intent.status,
+            },
+            idempotency_key=idempotency_key,
+            created_by=user,
+        )
+    except IntegrityError as exc:
+        if idempotency_key:
+            existing = Payment.objects.filter(
+                order=order,
+                provider=provider.code,
+                idempotency_key=idempotency_key,
+            ).first()
+            if existing:
+                return existing
+        raise ValueError("Chiave di idempotenza già utilizzata.") from exc
 
 @transaction.atomic
 def create_mock_payment(order, user, succeed=True):
     payment = create_payment_intent(order, user)
+    if payment.status == Payment.Status.SUCCEEDED:
+        return payment
 
     if succeed:
         payment.status = Payment.Status.SUCCEEDED
         payment.completed_at = timezone.now()
         payment.save(update_fields=["status", "completed_at"])
-        transition_order(order, Order.Status.PAID, user, "Pagamento simulato completato.")
+        if order.status == Order.Status.AWAITING_PAYMENT:
+            transition_order(order, Order.Status.PAID, user, "Pagamento simulato completato.")
     else:
         payment.status = Payment.Status.FAILED
         payment.completed_at = timezone.now()
         payment.save(update_fields=["status", "completed_at"])
-
     return payment
 
 def build_invoice_pdf(invoice):
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-
+    _, height = A4
     y = height - 55
     pdf.setFont("Helvetica-Bold", 18)
     pdf.drawString(45, y, "DOMUSOS - Fattura")
     y -= 28
 
     pdf.setFont("Helvetica", 10)
-    header_lines = [
+    for line in [
         f"Numero: {invoice.number}",
         f"Ordine: {invoice.order.number}",
         f"Cliente: {invoice.customer_name}",
         f"Codice fiscale/P.IVA: {invoice.customer_tax_code or '-'}",
         f"Indirizzo: {invoice.customer_address or '-'}",
-    ]
-    for line in header_lines:
+    ]:
         pdf.drawString(45, y, line[:110])
         y -= 16
 
@@ -100,7 +114,6 @@ def build_invoice_pdf(invoice):
     pdf.drawRightString(555, y, f"IVA: EUR {invoice.vat_total}")
     y -= 16
     pdf.drawRightString(555, y, f"Totale: EUR {invoice.total}")
-
     pdf.save()
     buffer.seek(0)
     return buffer.read()
