@@ -1,7 +1,31 @@
 from django.conf import settings
+from django.core.files.storage import default_storage
 from rest_framework import permissions, response, status, views
 from apps.accounts.models import User
 from apps.catalog.models import Service
+
+def _check_storage():
+    if not settings.USE_S3:
+        return False
+    try:
+        default_storage.exists("__domusos_readiness_probe__")
+        return True
+    except Exception:
+        return False
+
+def _check_antivirus():
+    if not settings.ANTIVIRUS_ENABLED:
+        return False
+    try:
+        import pyclamd
+        client = pyclamd.ClamdNetworkSocket(
+            host=settings.CLAMAV_HOST,
+            port=settings.CLAMAV_PORT,
+            timeout=3,
+        )
+        return bool(client.ping())
+    except Exception:
+        return False
 
 class ReadinessView(views.APIView):
     permission_classes = [permissions.IsAdminUser]
@@ -17,15 +41,12 @@ class ReadinessView(views.APIView):
             "catalog_loaded": Service.objects.filter(is_active=True).exists(),
             "admin_exists": User.objects.filter(is_superuser=True).exists(),
             "email_configured": bool(settings.DEFAULT_FROM_EMAIL),
-            "antivirus_enabled": bool(settings.ANTIVIRUS_ENABLED),
-            "s3_enabled": bool(settings.USE_S3),
+            "antivirus_reachable": _check_antivirus(),
+            "storage_reachable": _check_storage(),
+            "real_payment_provider": settings.PAYMENT_PROVIDER.upper() != "MOCK",
         }
         ready = all(checks.values())
         return response.Response(
-            {
-                "ready": ready,
-                "checks": checks,
-                "version": "1.0.1",
-            },
+            {"ready": ready, "checks": checks, "version": "1.0.2"},
             status=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
         )

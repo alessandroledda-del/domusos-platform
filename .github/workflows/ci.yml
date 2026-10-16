@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-sqlite:
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings_test
+      USE_S3: "0"
+      ANTIVIRUS_ENABLED: "0"
+      RATE_LIMIT_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt
+      - run: python backend/manage.py check
+      - run: python backend/manage.py test
+      - run: python -m compileall backend
+
+  backend-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: domusos_test
+          POSTGRES_USER: domusos
+          POSTGRES_PASSWORD: domusos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U domusos -d domusos_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings_test_postgres
+      POSTGRES_DB: domusos_test
+      POSTGRES_USER: domusos
+      POSTGRES_PASSWORD: domusos
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      USE_S3: "0"
+      ANTIVIRUS_ENABLED: "0"
+      RATE_LIMIT_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt
+      - run: python backend/manage.py migrate --noinput
+      - run: python backend/manage.py makemigrations --check --dry-run
+      - run: python backend/manage.py test
+      - run: python backend/manage.py spectacular --file openapi.yml
+
+  frontend:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - working-directory: frontend
+        run: npm install
+      - working-directory: frontend
+        run: npm run build
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - run: docker compose config

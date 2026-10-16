@@ -1,5 +1,7 @@
+import uuid
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from apps.orders.models import Order
 
 class Payment(models.Model):
@@ -40,11 +42,11 @@ class Invoice(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        if not self.number:
-            from django.utils import timezone
-            year = timezone.now().year
-            prefix = f"INV-{year}-"
-            last = Invoice.objects.filter(number__startswith=prefix).order_by("-number").first()
-            sequence = int(last.number.split("-")[-1]) + 1 if last else 1
-            self.number = f"{prefix}{sequence:06d}"
+        needs_number = not self.number
+        if needs_number:
+            self.number = f"TMP-{uuid.uuid4().hex[:20]}"
         super().save(*args, **kwargs)
+        if needs_number and self.number.startswith("TMP-"):
+            number = f"INV-{timezone.now().year}-{self.pk:06d}"
+            type(self).objects.filter(pk=self.pk).update(number=number)
+            self.number = number

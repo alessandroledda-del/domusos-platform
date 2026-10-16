@@ -1,7 +1,8 @@
 from django.utils import timezone
 from rest_framework import decorators, permissions, response, status, views, viewsets
-from apps.properties.access import accessible_properties
+from apps.properties.access import accessible_properties, manageable_properties
 from .models import Finding, VerificationCertificate, VerificationRun
+from .permissions import CanManageCompliance
 from .serializers import (
     FindingSerializer,
     VerificationCertificateSerializer,
@@ -21,13 +22,12 @@ class VerificationRunViewSet(viewsets.ReadOnlyModelViewSet):
     def run(self, request):
         property_id = request.data.get("property")
         try:
-            property_obj = accessible_properties(request.user).get(id=property_id)
+            property_obj = manageable_properties(request.user).get(id=property_id)
         except Exception:
             return response.Response(
-                {"detail": "Immobile non trovato."},
+                {"detail": "Immobile non trovato o non gestibile."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-
         verification = run_verification(property_obj, request.user)
         return response.Response(
             VerificationRunSerializer(verification).data,
@@ -37,6 +37,11 @@ class VerificationRunViewSet(viewsets.ReadOnlyModelViewSet):
     @decorators.action(detail=True, methods=["post"])
     def issue_certificate(self, request, pk=None):
         verification = self.get_object()
+        if not manageable_properties(request.user).filter(pk=verification.property_id).exists():
+            return response.Response(
+                {"detail": "Non autorizzato a emettere certificati per questo immobile."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         try:
             certificate = issue_certificate(verification, request.user)
         except ValueError as exc:
@@ -51,6 +56,7 @@ class VerificationRunViewSet(viewsets.ReadOnlyModelViewSet):
 
 class FindingViewSet(viewsets.ModelViewSet):
     serializer_class = FindingSerializer
+    permission_classes = [CanManageCompliance]
     http_method_names = ["get", "patch", "head", "options"]
 
     def get_queryset(self):
@@ -60,13 +66,13 @@ class FindingViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = serializer.instance
+        if not manageable_properties(self.request.user).filter(pk=instance.property_id).exists():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Non puoi modificare le criticità di questo immobile.")
         new_status = serializer.validated_data.get("status", instance.status)
         extra = {}
         if new_status == Finding.Status.RESOLVED:
-            extra = {
-                "resolved_by": self.request.user,
-                "resolved_at": timezone.now(),
-            }
+            extra = {"resolved_by": self.request.user, "resolved_at": timezone.now()}
         serializer.save(**extra)
 
 class CertificateViewSet(viewsets.ReadOnlyModelViewSet):
@@ -94,7 +100,6 @@ class PublicCertificateVerifyView(views.APIView):
 
         is_expired = certificate.expires_at and certificate.expires_at <= timezone.now()
         valid = certificate.status == VerificationCertificate.Status.VALID and not is_expired
-
         return response.Response({
             "valid": valid,
             "public_code": certificate.public_code,
@@ -119,7 +124,6 @@ class ComplianceDashboardView(views.APIView):
         properties = accessible_properties(request.user)
         verifications = VerificationRun.objects.filter(property__in=properties)
         findings = Finding.objects.filter(property__in=properties)
-
         return response.Response({
             "properties_total": properties.count(),
             "verified_properties": properties.filter(status="VERIFIED").count(),
@@ -127,11 +131,9 @@ class ComplianceDashboardView(views.APIView):
             "verification_runs": verifications.count(),
             "open_findings": findings.filter(status__in=["OPEN", "ACKNOWLEDGED"]).count(),
             "critical_findings": findings.filter(
-                status__in=["OPEN", "ACKNOWLEDGED"],
-                severity="CRITICAL",
+                status__in=["OPEN", "ACKNOWLEDGED"], severity="CRITICAL"
             ).count(),
             "high_findings": findings.filter(
-                status__in=["OPEN", "ACKNOWLEDGED"],
-                severity="HIGH",
+                status__in=["OPEN", "ACKNOWLEDGED"], severity="HIGH"
             ).count(),
         })

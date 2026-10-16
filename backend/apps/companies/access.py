@@ -10,14 +10,64 @@ def accessible_companies(user):
         Q(owner=user) | Q(memberships__user=user, memberships__is_active=True)
     ).distinct()
 
-def user_can_manage_company(user, company):
+def user_can_admin_company(user, company):
     if user.is_superuser or company.owner_id == user.id:
         return True
     return company.memberships.filter(
         user=user,
         is_active=True,
-        role__in=[
-            CompanyMembership.Role.ADMIN,
-            CompanyMembership.Role.MANAGER,
-        ],
+        role=CompanyMembership.Role.ADMIN,
     ).exists()
+
+def user_can_manage_company(user, company):
+    if user_can_admin_company(user, company):
+        return True
+    return company.memberships.filter(
+        user=user,
+        is_active=True,
+        role=CompanyMembership.Role.MANAGER,
+    ).exists()
+
+def user_can_edit_company(user, company):
+    if user_can_manage_company(user, company):
+        return True
+    return company.memberships.filter(
+        user=user,
+        is_active=True,
+        role=CompanyMembership.Role.OPERATOR,
+    ).exists()
+
+def manageable_companies(user):
+    if not user.is_authenticated:
+        return Company.objects.none()
+    if user.is_superuser:
+        return Company.objects.all()
+    return Company.objects.filter(
+        Q(owner=user)
+        | Q(
+            memberships__user=user,
+            memberships__is_active=True,
+            memberships__role__in=[
+                CompanyMembership.Role.ADMIN,
+                CompanyMembership.Role.MANAGER,
+            ],
+        )
+    ).distinct()
+
+def editable_companies(user):
+    if not user.is_authenticated:
+        return Company.objects.none()
+    if user.is_superuser:
+        return Company.objects.all()
+    return Company.objects.filter(
+        Q(owner=user)
+        | Q(
+            memberships__user=user,
+            memberships__is_active=True,
+            memberships__role__in=[
+                CompanyMembership.Role.ADMIN,
+                CompanyMembership.Role.MANAGER,
+                CompanyMembership.Role.OPERATOR,
+            ],
+        )
+    ).distinct()

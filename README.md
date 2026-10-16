@@ -1,50 +1,48 @@
-# DOMUSOS Platform v1.0.1
+# DOMUSOS Platform v1.0.2
 
-Release di manutenzione della piattaforma DomusOS, orientata alla riproducibilità del database e al deploy controllato.
+Release di hardening della piattaforma DomusOS, orientata a sicurezza dei tenant, integrità degli ordini e deploy controllato.
 
-## Novità v1.0.1
+## Novità v1.0.2
 
-- migrazioni iniziali versionate per tutte le app con modelli;
-- produzione senza `makemigrations` automatico;
-- controllo CI contro modifiche ai modelli prive di migrazione;
-- comando esplicito per generare nuove migrazioni;
-- test SQLite eseguiti con le migrazioni reali;
-- correzioni ai profili partner e alla validazione degli accessi;
-- controlli statici più severi sulla release;
-- manifest dei componenti e delle migrazioni.
+- RBAC e permessi object-level rafforzati;
+- accesso cliente agli immobili in sola lettura;
+- protezione documenti e workflow contro modifiche cross-tenant;
+- ordini protetti da modifica diretta dello stato e delle relazioni;
+- pagamenti con idempotenza scoped e webhook vincolati al provider;
+- pagamento mock disabilitato per clienti fuori dallo sviluppo;
+- numerazione ordine/fattura/payout basata su PK;
+- compliance gestibile solo dai ruoli autorizzati;
+- readiness con controlli effettivi su S3 e ClamAV;
+- build production Next.js con URL API passato in fase di build;
+- CI su SQLite e PostgreSQL;
+- test di regressione di sicurezza.
 
 ## Avvio sviluppo
 
-```bash
-cp .env.example .env
-docker compose up --build
-```
+    cp .env.example .env
+    docker compose up --build
 
 Configurazione iniziale:
 
-```bash
-docker compose exec backend python manage.py createsuperuser
-docker compose exec backend python manage.py seed_catalog
-docker compose exec backend python manage.py seed_demo
-```
-
-## Migrazioni
-
-Le migrazioni sono incluse nel repository. Dopo una modifica ai modelli:
-
-```bash
-make migrations
-make migration-check
-```
-
-L'avvio production applica esclusivamente migrazioni già versionate.
+    docker compose exec backend python manage.py createsuperuser
+    docker compose exec backend python manage.py seed_catalog
+    docker compose exec backend python manage.py seed_demo
 
 ## Test
 
-```bash
-DJANGO_SETTINGS_MODULE=config.settings_test python manage.py test
-```
+SQLite:
+
+    DJANGO_SETTINGS_MODULE=config.settings_test python manage.py test
+
+PostgreSQL:
+
+    DJANGO_SETTINGS_MODULE=config.settings_test_postgres python manage.py test
+
+## Produzione
+
+Usare .env.production.example come base e sostituire tutti i valori placeholder.
+La readiness production richiede un provider di pagamento reale: MOCK non è considerato pronto.
 
 ## Stato
 
-Release adatta a demo avanzate e pilot controllati. Rimangono necessari provider reali, revisione legale, DPIA/GDPR, test end-to-end e penetration test prima dell'esposizione pubblica.
+Adatta a demo avanzate e pilot controllati dopo esito positivo della CI. Prima dell'esposizione pubblica restano necessari revisione legale, DPIA/GDPR, test end-to-end e penetration test.

@@ -6,6 +6,7 @@ from .services import transition_order
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
+    http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
         queryset = (
@@ -31,24 +32,33 @@ class OrderViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-    @decorators.action(detail=True, methods=["post"])
+    @decorators.action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[permissions.IsAdminUser],
+    )
     def transition(self, request, pk=None):
         order = self.get_object()
         new_status = request.data.get("status")
+        if new_status == Order.Status.PAID:
+            return response.Response(
+                {"detail": "Lo stato PAID può essere impostato solo dal modulo pagamenti."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         note = request.data.get("note", "")
         try:
             transition_order(order, new_status, request.user, note)
         except ValueError:
-            return response.Response({"detail": "Invalid order transition."}, status=status.HTTP_400_BAD_REQUEST)
+            return response.Response(
+                {"detail": "Transizione ordine non valida."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return response.Response(OrderSerializer(order).data)
 
 class OrderDashboardViewSet(viewsets.ViewSet):
     def list(self, request):
         queryset = Order.objects.all() if request.user.is_staff else Order.objects.filter(customer=request.user)
-        totals = queryset.aggregate(
-            orders=Count("id"),
-            revenue=Sum("total"),
-        )
+        totals = queryset.aggregate(orders=Count("id"), revenue=Sum("total"))
         return response.Response({
             "orders_total": totals["orders"] or 0,
             "revenue_total": totals["revenue"] or 0,

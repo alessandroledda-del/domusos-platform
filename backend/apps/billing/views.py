@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import decorators, response, status, viewsets
 from apps.orders.models import Order
 from .models import Invoice, Payment
@@ -28,10 +29,16 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
     @decorators.action(detail=False, methods=["post"])
     def mock_checkout(self, request):
+        if not settings.DEBUG and not request.user.is_staff:
+            return response.Response(
+                {"detail": "Pagamento mock non disponibile in questo ambiente."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         order_id = request.data.get("order")
         succeed = request.data.get("succeed", True)
         try:
-            order = Order.objects.get(id=order_id, customer=request.user)
+            queryset = Order.objects.all() if request.user.is_staff else Order.objects.filter(customer=request.user)
+            order = queryset.get(id=order_id)
             payment = create_mock_payment(order, request.user, bool(succeed))
         except Order.DoesNotExist:
             return response.Response({"detail": "Ordine non trovato."}, status=status.HTTP_404_NOT_FOUND)
