@@ -34,6 +34,8 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "number",
             "customer",
+            "status",
+            "internal_notes",
             "subtotal",
             "vat_total",
             "total",
@@ -70,6 +72,13 @@ class CreateOrderSerializer(serializers.Serializer):
 
         if property_id and not accessible_properties(request.user).filter(id=property_id).exists():
             raise serializers.ValidationError({"property": "Immobile non accessibile."})
+
+        if property_id and company_id:
+            if not accessible_properties(request.user).filter(
+                id=property_id,
+                company_id=company_id,
+            ).exists():
+                raise serializers.ValidationError("Immobile e organizzazione non corrispondono.")
 
         return attrs
 
