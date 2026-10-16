@@ -1,3 +1,4 @@
+import uuid
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -43,7 +44,7 @@ class Invoice(models.Model):
     def save(self, *args, **kwargs):
         needs_number = not self.number
         if needs_number:
-            self.number = f"TMP-{timezone.now().year}-{timezone.now().timestamp():.6f}"
+            self.number = f"TMP-{uuid.uuid4().hex[:20]}"
         super().save(*args, **kwargs)
         if needs_number and self.number.startswith("TMP-"):
             number = f"INV-{timezone.now().year}-{self.pk:06d}"
