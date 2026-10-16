@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from apps.companies.access import accessible_companies
+from apps.companies.access import editable_companies
+from .access import editable_properties
 from .models import Owner, Property
 
 class OwnerSerializer(serializers.ModelSerializer):
@@ -11,11 +12,8 @@ class OwnerSerializer(serializers.ModelSerializer):
 
     def validate_property(self, value):
         request = self.context.get("request")
-        if request and not Property.objects.filter(
-            id=value.id,
-            company__in=accessible_companies(request.user),
-        ).exists():
-            raise serializers.ValidationError("Immobile non accessibile.")
+        if request and not editable_properties(request.user).filter(id=value.id).exists():
+            raise serializers.ValidationError("Non puoi modificare i proprietari di questo immobile.")
         return value
 
 class PropertySerializer(serializers.ModelSerializer):
@@ -27,9 +25,10 @@ class PropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = Property
         fields = "__all__"
+        read_only_fields = ["created_by", "domus_score", "status", "created_at", "updated_at"]
 
     def validate_company(self, value):
         request = self.context.get("request")
-        if request and not accessible_companies(request.user).filter(id=value.id).exists():
-            raise serializers.ValidationError("Organizzazione non accessibile.")
+        if request and not editable_companies(request.user).filter(id=value.id).exists():
+            raise serializers.ValidationError("Non puoi modificare immobili per questa organizzazione.")
         return value
