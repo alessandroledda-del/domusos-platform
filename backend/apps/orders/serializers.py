@@ -34,8 +34,11 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "number",
             "customer",
+            "company",
+            "property",
             "status",
             "internal_notes",
+            "service_data",
             "subtotal",
             "vat_total",
             "total",
