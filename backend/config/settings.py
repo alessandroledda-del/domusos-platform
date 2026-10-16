@@ -145,7 +145,7 @@ SIMPLE_JWT = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "DomusOS API",
     "DESCRIPTION": "API della piattaforma DomusOS",
-    "VERSION": "1.0.1",
+    "VERSION": "1.0.2",
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
