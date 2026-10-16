@@ -1,10 +1,11 @@
+from django.db import transaction
 from django.db.models import Max
-from rest_framework import decorators, response, status, viewsets
+from rest_framework import decorators, exceptions, response, status, viewsets
+from apps.properties.access import accessible_properties, editable_properties
+from apps.properties.services import refresh_domus_score
 from .models import Document, DocumentVersion
 from .serializers import DocumentSerializer, DocumentVersionSerializer
 from .tasks import process_document_task
-from apps.properties.services import refresh_domus_score
-from apps.properties.access import accessible_properties
 
 class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
@@ -14,7 +15,14 @@ class DocumentViewSet(viewsets.ModelViewSet):
             property__in=accessible_properties(self.request.user)
         ).prefetch_related("versions")
 
+    def _ensure_write_access(self, document):
+        if not editable_properties(self.request.user).filter(pk=document.property_id).exists():
+            raise exceptions.PermissionDenied("Non puoi modificare documenti per questo immobile.")
+
     def perform_create(self, serializer):
+        property_obj = serializer.validated_data["property"]
+        if not editable_properties(self.request.user).filter(pk=property_obj.pk).exists():
+            raise exceptions.PermissionDenied("Non puoi caricare documenti per questo immobile.")
         document = serializer.save(
             uploaded_by=self.request.user,
             status=Document.Status.QUEUED,
@@ -29,7 +37,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
         refresh_domus_score(document.property)
         process_document_task.delay(document.id)
 
+    def perform_update(self, serializer):
+        self._ensure_write_access(serializer.instance)
+        serializer.save()
+
     def perform_destroy(self, instance):
+        self._ensure_write_access(instance)
         property_obj = instance.property
         instance.delete()
         refresh_domus_score(property_obj)
@@ -37,6 +50,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     @decorators.action(detail=True, methods=["post"])
     def process(self, request, pk=None):
         document = self.get_object()
+        self._ensure_write_access(document)
         document.status = Document.Status.QUEUED
         document.processing_error = ""
         document.save(update_fields=["status", "processing_error"])
@@ -49,18 +63,21 @@ class DocumentViewSet(viewsets.ModelViewSet):
     @decorators.action(detail=True, methods=["post"])
     def add_version(self, request, pk=None):
         document = self.get_object()
+        self._ensure_write_access(document)
         serializer = DocumentVersionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        current_max = document.versions.aggregate(value=Max("version_number"))["value"] or 0
-        version = serializer.save(
-            document=document,
-            version_number=current_max + 1,
-            uploaded_by=request.user,
-        )
-        document.file = version.file
-        document.status = Document.Status.QUEUED
-        document.processing_error = ""
-        document.save(update_fields=["file", "status", "processing_error"])
+        with transaction.atomic():
+            locked = Document.objects.select_for_update().get(pk=document.pk)
+            current_max = locked.versions.aggregate(value=Max("version_number"))["value"] or 0
+            version = serializer.save(
+                document=locked,
+                version_number=current_max + 1,
+                uploaded_by=request.user,
+            )
+            locked.file = version.file
+            locked.status = Document.Status.QUEUED
+            locked.processing_error = ""
+            locked.save(update_fields=["file", "status", "processing_error"])
         process_document_task.delay(document.id)
         return response.Response(
             DocumentVersionSerializer(version).data,
